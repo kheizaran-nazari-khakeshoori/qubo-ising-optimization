@@ -1,0 +1,8 @@
+#!/media/kheizaran/e9209cc3-5454-4ba8-ae3e-9917dc1db432/3.INTERNSHIP/vrp_venv/bin/python3
+# -*- coding: utf-8 -*-
+import re
+import sys
+from pulp.tests.run_tests import pulpTestAll
+if __name__ == '__main__':
+    sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])
+    sys.exit(pulpTestAll())
