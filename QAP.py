@@ -87,8 +87,62 @@ def apply_swap_and_check(F, D, P, a, b, pc=0.0):
     return pred, true, pred - true
 
 
+# The solver uses the efficient delta_swap function to find the best local assignment
+def local_search_solver(F, D, initial_P, max_iterations=1000):
+    """
+    Performs a simple 2-opt (swap) local search to find a local minimum 
+    for the QAP cost by greedily selecting the best swap in each step.
+    
+    F: Flow matrix
+    D: Distance matrix
+    initial_P: Starting assignment permutation
+    max_iterations: Safety limit for the search
+    """
+    N = len(initial_P)
+    current_P = initial_P.copy()
+    
+    # Calculate the starting energy using the classical formula
+    # We use a pc=0.0 since delta_swap only calculates objective cost change
+    current_cost = original_qap(F, D, current_P) 
+    
+    print(f"\n--- Starting Local Search Solver ---")
+    print(f"Initial Random Cost: {current_cost:.2f}")
+    
+    # --- Main Search Loop ---
+    for iteration in range(max_iterations):
+        best_swap_delta = 0.0
+        best_i, best_j = -1, -1
+        
+        # 1. Evaluate all possible 2-swaps (a, b)
+        # Check all unique pairs where i < j
+        for i in range(N):
+            for j in range(i + 1, N):
+                
+                # Use the efficient delta_swap function
+                delta = delta_swap(F, D, current_P, i, j)
+                
+                # 2. Check for the best improvement (delta < 0)
+                if delta < best_swap_delta:
+                    best_swap_delta = delta
+                    best_i, best_j = i, j
+        
+        # 3. Check for Termination
+        if best_swap_delta >= 0:
+            # No swap resulted in a cost reduction. Local minimum reached.
+            break
+            
+        # 4. Perform the Best Swap
+        current_P[best_i], current_P[best_j] = current_P[best_j], current_P[best_i]
+        
+        # Update the cost quickly
+        current_cost += best_swap_delta
+        
+    print(f"Search terminated after {iteration} swaps.")
+    print(f"Final Optimized Cost: {current_cost:.2f}")
+    print(f"Final Assignment P: {current_P}")
+    return current_P, current_cost
 #-----------------------------------------------------------------------------------
-
+#the QUBO Matrix Q is like a giant map that tells us the cost of any possible arrangement.
 # next step QAP to qubo 
 def get_index(i, j, N):
     """
@@ -216,45 +270,56 @@ def qubo_cost(Q, x_flat):
 
 
 if __name__ == "__main__":
-    # --- Example Usage for N=3 ---
-    N = 3
-    A = 500  # A large penalty coefficient
+    # Set a seed for reproducible random numbers
+    np.random.seed(42) 
+    N = 5 # Using N=5 to make the search more meaningful
+    A = 500
     
-    # Randomly generated matrices
-    F = np.array([[0, 1, 2], [1, 0, 3], [2, 3, 0]])
-    D = np.array([[0, 5, 4], [5, 0, 1], [4, 1, 0]])
+    # Generate random QAP matrices
+    F = np.random.randint(0, 10, (N, N))
+    D = np.random.randint(0, 10, (N, N))
     
-    # 1. Construct the QUBO Matrix (9x9)
+    # Ensure F and D diagonals are zero and matrices are symmetric
+    np.fill_diagonal(F, 0)
+    F = (F + F.T) / 2
+    np.fill_diagonal(D, 0)
+    D = (D + D.T) / 2
+    
+    # Create a random initial assignment for the solver
+    initial_P = np.arange(N)
+    np.random.shuffle(initial_P)
+    
+    # ----------------------------------------------------
+    # PART 1: Find the solution using the Local Search Solver
+    # ----------------------------------------------------
+    final_P, final_cost = local_search_solver(F, D, initial_P)
+    
+    # ----------------------------------------------------
+    # PART 2: QUBO Mapping and Verification (on the final solution)
+    # ----------------------------------------------------
+    
+    # 1. Construct the QUBO Matrix for the problem (Size N^2 x N^2)
     Q = qap_to_qubo(F, D, A)
-    print(f"QUBO Matrix Q (Size {N*N}x{N*N}):\n", Q)
-
-    # 2. Define a VALID state (x_flat) for verification
-    # Permutation P = [2, 0, 1] means:
-    # Facility 0 -> Site 2 (x_0,2 = 1)
-    # Facility 1 -> Site 0 (x_1,0 = 1)
-    # Facility 2 -> Site 1 (x_2,1 = 1)
+    print(f"\nQUBO Matrix Q (Size {N*N}x{N*N}) calculated for verification.")
+    
+    # 2. Convert the final assignment (P) to the flat binary vector (x_flat)
+    # The solver's result is used here!
     x_matrix = np.zeros((N, N), dtype=int)
-    P = [2, 0, 1] # A valid assignment
-    for i, j in enumerate(P):
-        x_matrix[i, j] = 1
+    x_matrix[np.arange(N), final_P] = 1
+    x_flat = x_matrix.flatten()
     
-    x_flat = x_matrix.flatten() # [0, 0, 1, 1, 0, 0, 0, 1, 0]
-    
-    # 3. Calculate Cost using the Original QAP formula (Should have 0 penalty)
-    cost_classic = original_qap(F, D, P) + penalty_cost(x_matrix, A)
-    
-    # 4. Calculate Cost using the QUBO formula
-    cost_qubo = qubo_cost(Q, x_flat)
-    # 5. Calculate the Constant Offset
-    N = F.shape[0] 
+    # 3. Calculate QUBO cost and Constant Offset
+    cost_qubo_raw = qubo_cost(Q, x_flat)
     CONSTANT_OFFSET = 2 * N * A
-    #6. Adjust the QUBO energy for comparison
-    cost_qubo_adjusted = cost_qubo + CONSTANT_OFFSET
-    print("\n--- Verification ---")
-    print(f"Classic QAP Cost (Total): {cost_classic}")
-    print(f"QUBO Energy (x^T * Q * x): {cost_qubo}")
-    print(f"Difference (should be near zero): {cost_classic - cost_qubo_adjusted}")
-
+    cost_qubo_adjusted = cost_qubo_raw + CONSTANT_OFFSET
+    
+    # 4. Verification of the solver result against the QUBO energy
+    print("\n--- QUBO Verification of Solver Result ---")
+    print(f"Solver's Final Cost (Classic QAP): {final_cost:.2f}")
+    print(f"QUBO Raw Energy (x^T * Q * x): {cost_qubo_raw:.2f}")
+    print(f"Constant Offset (2NA): {CONSTANT_OFFSET:.2f}")
+    print(f"QUBO Energy + Offset: {cost_qubo_adjusted:.2f}")
+    print(f"Difference (Solver Cost - Adjusted QUBO): {final_cost - cost_qubo_adjusted:.2f}")
 
 
 
