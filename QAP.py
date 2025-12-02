@@ -19,10 +19,16 @@ def original_qap(F,D,P):
 #the second functions would be pealty cost 
 
 
-def penalty_cost(x,pc):
-    row = x.sum(axis=1) - 1
-    col = x.sum(axis=0) - 1
-    return pc * (np.sum(row**2) + np.sum(col**2))
+def penalty_cost(x, pc):
+    penalty = 0
+    n = x.shape[0] # it is better to get the row
+    # Row deviations
+    for i in range(n):
+        penalty += (x[i, :].sum() - 1)**2
+    # Column deviations
+    for j in range(n):
+        penalty += (x[:, j].sum() - 1)**2
+    return pc * penalty
 
 
 # the third function is delta swap 
@@ -36,12 +42,13 @@ def delta_swap(F, D, P, a, b):
         if t == a or t == b:
             continue
         rt = P[t]
+        # Delta formula changes in coding 
         delta += (F[a, t] * (D[rb, rt] - D[ra, rt]) # (a, t)
                   + F[t, a] * (D[rt, rb] - D[rt, ra]) # (t, a)
                   + F[b, t] * (D[ra, rt] - D[rb, rt]) # (b, t)
                   + F[t, b] * (D[rt, ra] - D[rt, rb])) # (t, b)
 
-    # 3. Internal pair contribution (a,b) and (b,a) (your original code)
+    # 3. Internal pair contribution (a,b) and (b,a) 
     delta += F[a, b] * (D[rb, ra] - D[ra, rb])
     delta += F[b, a] * (D[ra, rb] - D[rb, ra])
     
@@ -88,16 +95,14 @@ def apply_swap_and_check(F, D, P, a, b, pc=0.0):
 
 
 # The solver uses the efficient delta_swap function to find the best local assignment
-def local_search_solver(F, D, initial_P, max_iterations=1000):
-    """
-    Performs a simple 2-opt (swap) local search to find a local minimum 
-    for the QAP cost by greedily selecting the best swap in each step.
-    
+def local_search_solver(F, D, initial_P, max_iterations = 1000):
+    """ 
     F: Flow matrix
     D: Distance matrix
     initial_P: Starting assignment permutation
     max_iterations: Safety limit for the search
     """
+   
     N = len(initial_P)
     current_P = initial_P.copy()
     
@@ -108,10 +113,10 @@ def local_search_solver(F, D, initial_P, max_iterations=1000):
     print(f"\n--- Starting Local Search Solver ---")
     print(f"Initial Random Cost: {current_cost:.2f}")
     
-    # --- Main Search Loop ---
+    #Main Search Loop 
     for iteration in range(max_iterations):
         best_swap_delta = 0.0
-        best_i, best_j = -1, -1
+        best_i, best_j = -1, -1 # think of as a flag 
         
         # 1. Evaluate all possible 2-swaps (a, b)
         # Check all unique pairs where i < j
@@ -322,7 +327,8 @@ if __name__ == "__main__":
     print(f"Difference (Solver Cost - Adjusted QUBO): {final_cost - cost_qubo_adjusted:.2f}")
 
 
-
-
-
+"""
+QAP Formula: The QAP objective is to find an assignment (a permutation $P$) that minimizes the total cost.
+Group 1: Classical QAP Functions (The Solver)original_qappenalty_costdelta_swaptotal_costlocal_search_solver (The tool that finds the solution)Group 2: QUBO Mapping Functions (The Result)get_index_get_objective_qubo_get_penalty_quboqap_to_quboqubo_cost (The tool that reads the $\mathbf{Q}$ matrix)
+"""
     
