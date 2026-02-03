@@ -149,43 +149,74 @@ def plot_individual(N, final_energies, save_path=None):
 
 
 def plot_summary(all_results, save_path=None):
-    """Create summary plots for all N values"""
-    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    """Create comprehensive summary plots for all N values"""
+    fig, axes = plt.subplots(2, 3, figsize=(18, 10))
     
     N_values = [r['N'] for r in all_results]
     means = [r['mean_energy'] for r in all_results]
     stds = [r['std_energy'] for r in all_results]
     bests = [r['best_energy'] for r in all_results]
+    medians = [r['median_energy'] for r in all_results]
     
-    # Plot 1: Mean Energy vs N
-    axes[0, 0].plot(N_values, means, 'o-', linewidth=2, markersize=6, color='#2b7bba')
-    axes[0, 0].set_xlabel('Problem Size (N)', fontsize=11)
-    axes[0, 0].set_ylabel('Mean Energy', fontsize=11)
-    axes[0, 0].set_title('Mean Energy vs Problem Size', fontsize=12, fontweight='bold')
+    # Plot 1: Mean Energy vs N with Error Bars
+    axes[0, 0].errorbar(N_values, means, yerr=stds, fmt='o-', linewidth=2, 
+                        markersize=6, color='#2b7bba', capsize=5, capthick=2,
+                        ecolor='gray', alpha=0.8, label='Mean ± Std Dev')
+    axes[0, 0].set_xlabel('Problem Size (N)', fontsize=11, fontweight='bold')
+    axes[0, 0].set_ylabel('Mean Energy', fontsize=11, fontweight='bold')
+    axes[0, 0].set_title('Mean Energy vs N (with Error Bars)', fontsize=12, fontweight='bold')
     axes[0, 0].grid(alpha=0.3)
+    axes[0, 0].legend()
     
-    # Plot 2: Standard Deviation vs N
-    axes[0, 1].plot(N_values, stds, 'o-', linewidth=2, markersize=6, color='#d9534f')
-    axes[0, 1].set_xlabel('Problem Size (N)', fontsize=11)
-    axes[0, 1].set_ylabel('Standard Deviation', fontsize=11)
-    axes[0, 1].set_title('Energy Std Dev vs Problem Size', fontsize=12, fontweight='bold')
+    # Plot 2: Best Energy vs N with Error Bars (using std as uncertainty)
+    axes[0, 1].errorbar(N_values, bests, yerr=[s*0.5 for s in stds], fmt='o-', 
+                        linewidth=2, markersize=6, color='#5cb85c', capsize=5, 
+                        capthick=2, ecolor='gray', alpha=0.8, label='Best ± 0.5×Std')
+    axes[0, 1].set_xlabel('Problem Size (N)', fontsize=11, fontweight='bold')
+    axes[0, 1].set_ylabel('Best Energy Found', fontsize=11, fontweight='bold')
+    axes[0, 1].set_title('Best Energy vs N (with Uncertainty)', fontsize=12, fontweight='bold')
     axes[0, 1].grid(alpha=0.3)
+    axes[0, 1].legend()
     
-    # Plot 3: Best Energy vs N
-    axes[1, 0].plot(N_values, bests, 'o-', linewidth=2, markersize=6, color='#5cb85c')
-    axes[1, 0].set_xlabel('Problem Size (N)', fontsize=11)
-    axes[1, 0].set_ylabel('Best Energy Found', fontsize=11)
-    axes[1, 0].set_title('Best Energy vs Problem Size', fontsize=12, fontweight='bold')
+    # Plot 3: Comparison (Mean vs Best vs Median)
+    axes[0, 2].plot(N_values, means, 'o-', linewidth=2, markersize=6, 
+                    color='#2b7bba', label='Mean', alpha=0.8)
+    axes[0, 2].plot(N_values, bests, 's-', linewidth=2, markersize=6, 
+                    color='#5cb85c', label='Best', alpha=0.8)
+    axes[0, 2].plot(N_values, medians, '^-', linewidth=2, markersize=6, 
+                    color='#f0ad4e', label='Median', alpha=0.8)
+    axes[0, 2].set_xlabel('Problem Size (N)', fontsize=11, fontweight='bold')
+    axes[0, 2].set_ylabel('Energy', fontsize=11, fontweight='bold')
+    axes[0, 2].set_title('Energy Comparison vs N', fontsize=12, fontweight='bold')
+    axes[0, 2].grid(alpha=0.3)
+    axes[0, 2].legend()
+    
+    # Plot 4: Standard Deviation vs N
+    axes[1, 0].plot(N_values, stds, 'o-', linewidth=2, markersize=6, color='#d9534f')
+    axes[1, 0].set_xlabel('Problem Size (N)', fontsize=11, fontweight='bold')
+    axes[1, 0].set_ylabel('Standard Deviation', fontsize=11, fontweight='bold')
+    axes[1, 0].set_title('Energy Std Dev vs N', fontsize=12, fontweight='bold')
     axes[1, 0].grid(alpha=0.3)
     
-    # Plot 4: Coefficient of Variation (CV = std/mean)
+    # Plot 5: Coefficient of Variation (CV = std/mean)
     cv = [r['std_energy'] / r['mean_energy'] if r['mean_energy'] != 0 else 0 
           for r in all_results]
     axes[1, 1].plot(N_values, cv, 'o-', linewidth=2, markersize=6, color='#f0ad4e')
-    axes[1, 1].set_xlabel('Problem Size (N)', fontsize=11)
-    axes[1, 1].set_ylabel('Coefficient of Variation', fontsize=11)
-    axes[1, 1].set_title('Energy CV vs Problem Size', fontsize=12, fontweight='bold')
+    axes[1, 1].set_xlabel('Problem Size (N)', fontsize=11, fontweight='bold')
+    axes[1, 1].set_ylabel('Coefficient of Variation', fontsize=11, fontweight='bold')
+    axes[1, 1].set_title('Energy CV vs N', fontsize=12, fontweight='bold')
     axes[1, 1].grid(alpha=0.3)
+    
+    # Plot 6: Gap between Best and Mean (with error bars)
+    gaps = [means[i] - bests[i] for i in range(len(means))]
+    axes[1, 2].errorbar(N_values, gaps, yerr=[s*0.3 for s in stds], fmt='o-', 
+                        linewidth=2, markersize=6, color='#9b59b6', capsize=5,
+                        capthick=2, ecolor='gray', alpha=0.8, label='Gap ± 0.3×Std')
+    axes[1, 2].set_xlabel('Problem Size (N)', fontsize=11, fontweight='bold')
+    axes[1, 2].set_ylabel('Mean - Best Energy', fontsize=11, fontweight='bold')
+    axes[1, 2].set_title('Quality Gap vs N', fontsize=12, fontweight='bold')
+    axes[1, 2].grid(alpha=0.3)
+    axes[1, 2].legend()
     
     plt.tight_layout()
     
@@ -201,7 +232,7 @@ def plot_summary(all_results, save_path=None):
 if __name__ == "__main__":
     # Configuration
     N_start = 5
-    N_end = 50
+    N_end = 15
     N_step = 1  # You can change to 5 for N=5,10,15,...,50
     num_runs = 10000  # Adjust based on computational resources
     
