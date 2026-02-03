@@ -51,7 +51,7 @@ def delta_swap(F, D, P, a, b):
 
 # 4. LOCAL SEARCH SOLVER WITH SIMULATED ANNEALING
 
-def local_search_solver(F, D, initial_P, max_iterations=1000, temperature=1.0):
+def local_search_solver(F, D, initial_P, max_iterations=1000, temperature=10.0):
     N = len(initial_P)
     P = initial_P.copy()
     cost = original_qap(F, D, P)
@@ -68,6 +68,9 @@ def local_search_solver(F, D, initial_P, max_iterations=1000, temperature=1.0):
                     best_i, best_j = i, j
 
         if best_delta >= 0:
+            # No improving move found
+            if best_i == -1:  # No valid swap found at all
+                break
             # Metropolis criterion: accept worse solutions with probability
             r = np.random.rand()
             if r < np.exp(-best_delta / temperature):
@@ -77,6 +80,7 @@ def local_search_solver(F, D, initial_P, max_iterations=1000, temperature=1.0):
             else:
                 break
         else:
+            # Improving move - always accept
             P[best_i], P[best_j] = P[best_j], P[best_i]
             cost += best_delta
 
