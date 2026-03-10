@@ -51,7 +51,7 @@ def delta_swap(F, D, P, a, b):
 
 # 4. LOCAL SEARCH SOLVER WITH SIMULATED ANNEALING
 
-def local_search_solver(F, D, initial_P, max_iterations=1000, temperature=10.0):
+def local_search_solver(F, D, initial_P, max_iterations=100, temperature=10.0):
     N = len(initial_P)
     P = initial_P.copy()
     cost = original_qap(F, D, P)
@@ -233,8 +233,8 @@ if __name__ == "__main__":
     # Configuration
     N_start = 5
     N_end = 15
-    N_step = 1  # You can change to 5 for N=5,10,15,...,50
-    num_runs = 10000  # Adjust based on computational resources
+    N_step = 2  # Skip some values for faster execution
+    num_runs = 1000  # Reduced for faster execution (was 10000)
     
     # Create output directory
     output_dir = Path("qap_results")
