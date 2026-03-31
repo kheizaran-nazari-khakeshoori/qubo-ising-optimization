@@ -85,18 +85,46 @@ for k in range(number_of_vehicle):
 
 print("QUBO created:", Q_matrix.shape)
 
-# Convert QUBO → Ising 
+# Convert QUBO → Ising (fixed: symmetrized off-diagonal, correct constant shift)
 def qubo_to_ising(Q):
-    n = Q.shape[0] # number of variable
-    J = np.zeros((n, n)) #interaction between spins 
-    h = np.zeros(n) #  in fomulation it is external field applied on the spin i 
+    """Convert QUBO x^T Q x (x in {0,1}) to Ising s^T J s + h^T s + constant (s in {-1,1}).
+
+    Uses x = (s+1)/2. Symmetrizes Q to correctly handle upper-triangular builds.
+    Off-diagonal is divided by 4 (J[i,j] = Q_sym[i,j]/4), diagonal contributes
+    to h and constant. Energy equivalence: for all x, s=2x-1,
+    x^T Q x == s^T J s + h^T s + constant.
+    """
+    Q = np.asarray(Q, dtype=float)
+    # Symmetrize to handle Q built as upper-triangular (only i<j filled)
+    Q_sym = (Q + Q.T) / 2.0
+    # Preserve diagonal as-is after symmetrization (diag unaffected)
+    # Q_sym diag == Q diag /? For diag, (Q+Q.T)/2 keeps diag correct.
+    n = Q_sym.shape[0]
+    J = np.zeros((n, n))  # interaction between spins
+    h = np.zeros(n)  # external field
     for i in range(n):
         for j in range(n):
             if i != j:
-                J[i, j] = Q[i, j] / 4.0
-        h[i] = 0.5 * np.sum(Q[i, :])
-    constant = 0.25 * np.sum(Q)
+                J[i, j] = Q_sym[i, j] / 4.0
+        h[i] = 0.5 * np.sum(Q_sym[i, :])
+    # Constant = 1/4 sum_{i != j} Q_ij + 1/2 sum_i Q_ii = 1/4 sum(Q_sym) + 1/4 trace
+    constant = 0.25 * np.sum(Q_sym) + 0.25 * np.trace(Q_sym)
     return J, h, constant
+
+
+def qubo_energy(x, Q):
+    """Helper: QUBO energy x^T Q x."""
+    x = np.asarray(x, dtype=float)
+    Q = np.asarray(Q, dtype=float)
+    return float(x @ Q @ x)
+
+
+def ising_energy(s, J, h, constant):
+    """Helper: Ising energy s^T J s + h^T s + constant."""
+    s = np.asarray(s, dtype=float)
+    J = np.asarray(J, dtype=float)
+    h = np.asarray(h, dtype=float)
+    return float(s @ J @ s + h @ s + constant)
 
 J, h, constant = qubo_to_ising(Q_matrix)
 
