@@ -1,1 +1,65 @@
+# Virtual environments
 vrp_venv/
+venv/
+.venv/
+env/
+ENV/
+
+# Python build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+build/
+dist/
+*.whl
+*.tar.gz
+MANIFEST
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+nosetests.xml
+junit.xml
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+.pyre/
+
+# Jupyter
+.ipynb_checkpoints
+*.ipynb
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# Project artifacts - generated outputs
+*.npz
+*.npy
+qap_results/*.png
+qap_results/*.json
+!qap_results/.gitkeep
+ising_model_vrp.npz
+
+# Logs
+*.log
