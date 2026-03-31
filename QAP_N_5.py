@@ -1,103 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-
-# 1. PERMUTATION → ASSIGNMENT MATRIX
-
-
-def permutation_to_assignment(P):
-    N = len(P)
-    x = np.zeros((N, N), dtype=int)
-    x[np.arange(N), P] = 1
-    return x
-
-
-
-# 2. TRUE FOUR-INDEX QAP COST  
-
-
-def original_qap(F, D, P):
-    """
-    Full four-index QAP objective:
-    E = sum_{i,k,j,l} F[i,k] * D[j,l] * x[i,j] * x[k,l]
-    """
-    x = permutation_to_assignment(P)
-    N = F.shape[0]
-    cost = 0.0
-
-    for i in range(N):
-        for k in range(N):
-            for j in range(N):
-                for l in range(N):
-                    cost += F[i, k] * D[j, l] * x[i, j] * x[k, l]
-
-    return cost
-
-
-
-# 3. DELTA SWAP (CORRECT, EFFICIENT)
-
-
-def delta_swap(F, D, P, a, b):
-    N = len(P)
-    ra, rb = P[a], P[b]
-    delta = 0.0
-
-    for t in range(N):
-        if t == a or t == b:
-            continue
-        rt = P[t]
-
-        delta += (
-            F[a, t] * (D[rb, rt] - D[ra, rt]) +
-            F[t, a] * (D[rt, rb] - D[rt, ra]) +
-            F[b, t] * (D[ra, rt] - D[rb, rt]) +
-            F[t, b] * (D[rt, ra] - D[rt, rb])
-        )
-
-    delta += F[a, b] * (D[rb, ra] - D[ra, rb])
-    delta += F[b, a] * (D[ra, rb] - D[rb, ra])
-
-    delta += F[a, a] * (D[rb, rb] - D[ra, ra])
-    delta += F[b, b] * (D[ra, ra] - D[rb, rb])
-
-    return delta
-
-
-
-# 4. LOCAL SEARCH SOLVER WITH SIMULATED ANNEALING
-
-
-def local_search_solver(F, D, initial_P, max_iterations=1000, temperature=1.0):
-    N = len(initial_P)
-    P = initial_P.copy()
-    cost = original_qap(F, D, P)
-
-    for _ in range(max_iterations):
-        best_delta = 0.0
-        best_i, best_j = -1, -1
-
-        for i in range(N):
-            for j in range(i + 1, N):
-                delta = delta_swap(F, D, P, i, j)
-                if delta < best_delta:
-                    best_delta = delta
-                    best_i, best_j = i, j
-
-        if best_delta >= 0:
-            # Metropolis criterion: accept worse solutions with probability
-            r = np.random.rand()
-            if r < np.exp(-best_delta / temperature):
-                # Accept the swap anyway
-                P[best_i], P[best_j] = P[best_j], P[best_i]
-                cost += best_delta
-            else:
-                break
-        else:
-            P[best_i], P[best_j] = P[best_j], P[best_i]
-            cost += best_delta
-
-    return P, cost
+from qap_solver import (
+    permutation_to_assignment,
+    original_qap,
+    delta_swap,
+    local_search_solver,
+)
 
 
 
