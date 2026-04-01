@@ -42,13 +42,36 @@ def delta_swap(F, D, P, a, b):
     return delta
 
 
-def local_search_solver(F, D, initial_P, max_iterations=1000, temperature=1.0):
-    """Local search with Metropolis criterion (SA)."""
+def local_search_solver(
+    F,
+    D,
+    initial_P,
+    max_iterations=1000,
+    temperature=1.0,
+    cooling_rate=0.995,
+    min_temperature=0.1,
+    **kwargs,
+):
+    """Local search with Metropolis criterion and temperature decay schedule.
+
+    Args:
+        F, D: QAP flow/distance matrices.
+        initial_P: initial permutation.
+        max_iterations: max SA steps.
+        temperature: initial temperature (alias for initial_temp).
+        cooling_rate: geometric decay per iteration (0 < rate < 1).
+        min_temperature: floor for decay.
+        **kwargs: accepts initial_temperature as alias.
+    """
+    # Backwards compat: allow initial_temperature kwarg
+    if "initial_temperature" in kwargs:
+        temperature = kwargs["initial_temperature"]
+    current_temp = float(temperature)
     N = len(initial_P)
     P = initial_P.copy()
     cost = original_qap(F, D, P)
 
-    for _ in range(max_iterations):
+    for iteration in range(max_iterations):
         best_delta = 0.0
         best_i, best_j = -1, -1
 
@@ -63,10 +86,9 @@ def local_search_solver(F, D, initial_P, max_iterations=1000, temperature=1.0):
             # No improving move found — fix zero-delta / -1 index stuck loop
             if best_i == -1:
                 break
-            # Metropolis criterion: accept worse solutions with probability
-            # (guards against always-accepting delta==0 which caused infinite loop)
+            # Metropolis criterion with current temperature
             r = np.random.rand()
-            if r < np.exp(-best_delta / temperature):
+            if r < np.exp(-best_delta / current_temp):
                 # Accept the swap anyway
                 P[best_i], P[best_j] = P[best_j], P[best_i]
                 cost += best_delta
@@ -75,5 +97,8 @@ def local_search_solver(F, D, initial_P, max_iterations=1000, temperature=1.0):
         else:
             P[best_i], P[best_j] = P[best_j], P[best_i]
             cost += best_delta
+
+        # Geometric cooling schedule
+        current_temp = max(min_temperature, current_temp * cooling_rate)
 
     return P, cost
