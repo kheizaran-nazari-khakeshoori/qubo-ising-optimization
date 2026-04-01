@@ -60,7 +60,11 @@ def local_search_solver(F, D, initial_P, max_iterations=1000, temperature=1.0):
                     best_i, best_j = i, j
 
         if best_delta >= 0:
+            # No improving move found — fix zero-delta / -1 index stuck loop
+            if best_i == -1:
+                break
             # Metropolis criterion: accept worse solutions with probability
+            # (guards against always-accepting delta==0 which caused infinite loop)
             r = np.random.rand()
             if r < np.exp(-best_delta / temperature):
                 # Accept the swap anyway
