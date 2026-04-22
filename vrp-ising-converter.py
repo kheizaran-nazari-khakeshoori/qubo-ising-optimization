@@ -211,6 +211,32 @@ print("Constant term:", constant)
 
 # np.savez("ising_model_vrp.npz", J=J, h=h, constant=constant)
 
+def auto_tune_penalties(cities=None, distance_matrix=None, demand_list=None, cap=None, n_calls=20, random_state=0, verbose=False):
+    """Wire surrogate tuner to converter: run Bayesian optimization to find best penalties.
+    Returns dict with best penalties and score. Falls back to random search if skopt missing.
+    """
+    _cities = cities if cities is not None else globals()["cities"]
+    _dist = distance_matrix if distance_matrix is not None else globals()["distance"]
+    _demand = demand_list if demand_list is not None else globals()["demand"]
+    _cap = cap if cap is not None else globals()["capacity"]
+    try:
+        from ml.surrogate_objective import make_objective_for_instance
+        from ml.bayesian_optimizer import PenaltyTuner, random_search_baseline
+    except ImportError:
+        # fallback relative imports
+        from surrogate_objective import make_objective_for_instance
+        from bayesian_optimizer import PenaltyTuner, random_search_baseline
+    objective = make_objective_for_instance(_cities, _dist, _demand, _cap, n_samples=30, seed=random_state)
+    try:
+        tuner = PenaltyTuner(n_calls=n_calls, random_state=random_state)
+        result = tuner.optimize(objective, verbose=verbose)
+        return {"best_penalties": tuner.best_penalties(), "best_score": tuner.best_score(), "result": result}
+    except ImportError as e:
+        print(f"[auto_tune] scikit-optimize not available ({e}), falling back to random search")
+        best_x, best_val = random_search_baseline(objective, n_iter=n_calls, seed=random_state)
+        return {"best_penalties": dict(zip(["penalty_A","penalty_B","penalty_C","penalty_D"], best_x)), "best_score": best_val, "result": None}
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -220,10 +246,22 @@ if __name__ == "__main__":
     parser.add_argument("--penalty-C", type=float, default=DEFAULT_C, help="Weight for capacity constraint")
     parser.add_argument("--penalty-D", type=float, default=DEFAULT_D, help="Weight for distance objective")
     parser.add_argument("--output", type=str, default=None, help="Optional npz output path for J,h,constant")
+    parser.add_argument("--auto-tune", action="store_true", help="Run surrogate Bayesian optimization to suggest penalties")
+    parser.add_argument("--tune-calls", type=int, default=20, help="Number of BO iterations for --auto-tune")
     args = parser.parse_args()
 
-    # Rebuild if any penalty differs from defaults (or always, to show CLI usage)
-    if (args.penalty_A != DEFAULT_A or args.penalty_B != DEFAULT_B or args.penalty_C != DEFAULT_C or args.penalty_D != DEFAULT_D or args.output):
+    if args.auto_tune:
+        res = auto_tune_penalties(n_calls=args.tune_calls, verbose=True)
+        print(f"[auto-tune] Best penalties: {res['best_penalties']} score={res['best_score']:.4f}")
+        # Build tuned QUBO
+        bp = res["best_penalties"]
+        Q_tuned = build_qubo(penalty_A=bp["penalty_A"], penalty_B=bp["penalty_B"], penalty_C=bp["penalty_C"], penalty_D=bp["penalty_D"])
+        Jt, ht, ct = qubo_to_ising(Q_tuned)
+        print(f"[auto-tune] Tuned QUBO {Q_tuned.shape} Ising constant {ct}")
+        if args.output:
+            np.savez(args.output, J=Jt, h=ht, constant=ct)
+            print(f"[auto-tune] Saved to {args.output}")
+    elif (args.penalty_A != DEFAULT_A or args.penalty_B != DEFAULT_B or args.penalty_C != DEFAULT_C or args.penalty_D != DEFAULT_D or args.output):
         Q_custom = build_qubo(
             penalty_A=args.penalty_A,
             penalty_B=args.penalty_B,
