@@ -1,0 +1,45 @@
+[project]
+name = "qubo-ising-optimization"
+version = "0.2.0"
+description = "VRP/QAP to QUBO/Ising converters with ML-assisted tuning and warm-start"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy",
+    "matplotlib",
+    "scikit-learn",
+    "scikit-optimize",
+    "umap-learn",
+]
+
+[project.optional-dependencies]
+ml = [
+    "scikit-optimize",
+    "umap-learn",
+]
+torch = [
+    "torch>=2.0",
+]
+dev = [
+    "pytest",
+    "torch>=2.0",
+    "scikit-optimize",
+    "umap-learn",
+]
+
+[project.urls]
+Homepage = "https://github.com/kheizaran/qubo-ising-optimization"
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["ml*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.black]
+line-length = 100
