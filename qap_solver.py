@@ -102,3 +102,39 @@ def local_search_solver(
         current_temp = max(min_temperature, current_temp * cooling_rate)
 
     return P, cost
+
+
+def solve_with_warm_start(F, D, warm_start_model=None, n_restarts=1, **solver_kwargs):
+    """Integrate warm-start initial state into local search.
+
+    If warm_start_model is provided (MLP with predict_permutation), uses its
+    prediction as one of the restarts; otherwise falls back to random.
+    Returns best P,cost over restarts.
+    """
+    best_cost = float("inf")
+    best_P = None
+    tried_warm = False
+    for r in range(n_restarts):
+        if warm_start_model is not None and not tried_warm:
+            try:
+                P0 = warm_start_model.predict_permutation(F, D)
+                tried_warm = True
+            except Exception:
+                P0 = np.random.permutation(F.shape[0])
+        else:
+            P0 = np.random.permutation(F.shape[0])
+        P, cost = local_search_solver(F, D, P0, **solver_kwargs)
+        if cost < best_cost:
+            best_cost = cost
+            best_P = P
+    return best_P, best_cost
+
+
+def get_initial_solution(F, D, method="random", warm_start_model=None):
+    """Helper to obtain initial permutation via warm-start or random."""
+    if method == "warm_start" and warm_start_model is not None:
+        try:
+            return warm_start_model.predict_permutation(F, D)
+        except Exception:
+            pass
+    return np.random.permutation(F.shape[0])
