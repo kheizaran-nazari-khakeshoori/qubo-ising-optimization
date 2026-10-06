@@ -1,7 +1,11 @@
 # QUBO–Ising Optimization — VRP & QAP to Quantum-Ready Formulations
 
-*Converts Vehicle Routing (VRP) and Quadratic Assignment (QAP) problems into QUBO/Ising form for quantum annealers — with SA-enhanced local search, Bayesian penalty tuning, and ML warm-starts.*
+> Research toolkit (BSc thesis-linked, supervised by Prof. Giovanni Finocchio, UniME MIFT).
+> Question: how to encode VRP/QAP constraints into QUBO/Ising with tunable penalties solvable by SA / annealers?
 
+**Method:** `build_qubo()` with penalties A/B/C/D + slack bits; `qubo_to_ising()` conversion; SA local search with Metropolis + Bayesian penalty tuning.
+**Reproduce:** `pip install -r requirements.txt` then `python vrp-ising-converter.py` / `python qap_solver.py`
+**Author:** Kheizaran Nazari Khakeshoori — ORCID: https://orcid.org/0009-0000-2931-4503
 ***Portfolio Project** — Demonstrates combinatorial optimization, QUBO/Ising mapping, simulated annealing, Bayesian optimization, and quantum-ready engineering.*
 
 ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue)
